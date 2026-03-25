@@ -2,6 +2,10 @@ import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 
+
+# =======================================
+# Функция для доверительных интервалов
+# =======================================
 def get_confidence_intervals(data, alpha=0.05):
     n = len(data)
     mean = np.mean(data)
@@ -14,50 +18,50 @@ def get_confidence_intervals(data, alpha=0.05):
     margin = t_quant * s / np.sqrt(n)
     ci_mean = (mean - margin, mean + margin)
 
-    # --- 2. Доверительный интервал для sigma ---
+    # --- 2. Доверительный интервал для дисперсии s^2 ---
     chi_low = stats.chi2.ppf(alpha / 2, n - 1)
     chi_high = stats.chi2.ppf(1 - alpha / 2, n - 1)
 
-    ci_sigma = (
-        np.sqrt((n - 1) * s ** 2 / chi_high),
-        np.sqrt((n - 1) * s ** 2 / chi_low)
+    ci_variance = (
+        (n - 1) * s ** 2 / chi_high,
+        (n - 1) * s ** 2 / chi_low
     )
 
-    return ci_mean, ci_sigma
+    return ci_mean, ci_variance
 
 
-# =========================
-# ЗАДАНИЕ 1: Генерация данных
-# =========================
+# =======================================
+# ЗАДАНИЕ 1: Генерация выборок
+# =======================================
 np.random.seed(42)
 
 n1, n2 = 20, 100
 sample1 = np.random.normal(0, 1, n1)
 sample2 = np.random.normal(0, 1, n2)
 
-# =========================
-# ЗАДАНИЕ 2: Интервалы
-# =========================
+# =======================================
+# ЗАДАНИЕ 2: Построение доверительных интервалов
+# =======================================
 print("Доверительные интервалы:\n")
 
 for sample in [sample1, sample2]:
-    ci_m, ci_s = get_confidence_intervals(sample)
+    ci_m, ci_var = get_confidence_intervals(sample)
 
     print(f"Выборка n = {len(sample)}")
     print(f"  m ∈ ({ci_m[0]:.4f}, {ci_m[1]:.4f})")
-    print(f"  σ ∈ ({ci_s[0]:.4f}, {ci_s[1]:.4f})")
+    print(f"  s^2 ∈ ({ci_var[0]:.4f}, {ci_var[1]:.4f})")
     print()
 
-# =========================
-# ЗАДАНИЕ 3: F-тест
-# =========================
+# =======================================
+# ЗАДАНИЕ 3: F-тест (критерий Фишера)
+# =======================================
 alpha = 0.05
 
 # Исправленные дисперсии
 s1_sq = np.var(sample1, ddof=1)
 s2_sq = np.var(sample2, ddof=1)
 
-# Формируем F-статистику (большая дисперсия в числителе)
+# F-статистика (большая дисперсия в числителе)
 if s1_sq > s2_sq:
     F_obs = s1_sq / s2_sq
     df1, df2 = n1 - 1, n2 - 1
@@ -65,14 +69,8 @@ else:
     F_obs = s2_sq / s1_sq
     df1, df2 = n2 - 1, n1 - 1
 
-# Критическое значение
+# Критическое значение для одностороннего теста
 F_crit = stats.f.ppf(1 - alpha, df1, df2)
-
-# Двусторонний p-value
-p_value = 2 * min(
-    stats.f.cdf(F_obs, df1, df2),
-    1 - stats.f.cdf(F_obs, df1, df2)
-)
 
 print("F-тест на равенство дисперсий:\n")
 print(f"F_наблюдаемое = {F_obs:.4f}")
@@ -84,32 +82,30 @@ else:
     print("Вывод: нет оснований отвергать гипотезу о равенстве дисперсий")
 
 
+# =======================================
+# Графики
+# =======================================
 def plot_sample(data, title):
     x = np.linspace(-4, 4, 1000)
 
     plt.figure()
-
-    # Гистограмма
-    plt.hist(data, bins=10, density=True)
-
-    # Теоретическая плотность N(0,1)
-    plt.plot(x, stats.norm.pdf(x, 0, 1))
-
+    plt.hist(data, bins=10, density=True, alpha=0.7, label="Выборка")
+    plt.plot(x, stats.norm.pdf(x, 0, 1), 'r-', label="N(0,1)")
     plt.title(title)
     plt.xlabel("x")
     plt.ylabel("Плотность")
+    plt.legend()
     plt.grid()
     plt.show()
 
 
-# Графики для выборок
+# Гистограммы выборок
 plot_sample(sample1, "Выборка n=20")
 plot_sample(sample2, "Выборка n=100")
 
-# Boxplot (сравнение разброса)
+# Boxplot для сравнения
 plt.figure()
-plt.boxplot([sample1, sample2])
-plt.xticks([1, 2], ["n=20", "n=100"])
+plt.boxplot([sample1, sample2], labels=["n=20", "n=100"])
 plt.title("Сравнение выборок (boxplot)")
 plt.grid()
 plt.show()
